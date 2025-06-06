@@ -1,0 +1,124 @@
+---
+title: "2022-09 EA3"
+author: "Josephine McKelvy"
+date: "2022-11-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk.
+
+```{r}
+#import dataset
+raw.df <- read.csv("Mega EA3 dataset - JM-R.csv", stringsAsFactors = TRUE)
+
+#create a knowledge data frame with generated average scores for dumbbells
+#install.packages("dplyr")
+library(dplyr)
+raw.df %>%
+  group_by(Theme) %>%
+  summarise_at(vars("LO1.a","LO2.a","LO3.a","LO4.a"), mean,na.rm = TRUE) -> pre.df #average each learning objective (LO) column, excluding missing values
+  pre.df$average <- rowMeans(pre.df[,2:5], na.rm = TRUE)                           #average the row of LOs, excluding missing values
+  pre.df$time <- "pre" 
+  names(pre.df) <- c("session","LO1","LO2","LO3","LO4","average","time")
+raw.df %>%
+  group_by(Theme) %>%
+  summarise_at(vars("LO1.b","LO2.b","LO3.b","LO4.b"), mean) -> post.df
+  post.df$average <- rowMeans(post.df[,2:5], na.rm = TRUE)
+  post.df$time <- "post"
+  names(post.df) <- c("session","LO1","LO2","LO3","LO4","average","time")
+prepost.df <- rbind(pre.df,post.df)
+
+#########
+# scrap #
+#########
+
+new.df <- raw.df[, c(8:12,14:17)]
+new.df$preMean <- rowMeans(new.df[,2:5], na.rm=TRUE)
+new.df$postMean <- rowMeans(new.df[,6:9], na.rm=TRUE)
+
+newpre.df <- raw.df[,c(8:12)] 
+newpre.df%>%
+  group_by(Theme) %>%
+  #summarise_all(funs(mean), na.rm = TRUE) -> pre.df
+  #summarise(across(everything(), .f = list(mean = mean), na.rm = TRUE)) -> pre.df
+
+raw.df %>%
+  group_by(Theme) %>%
+  summarise_at(vars("LO1.a","LO2.a","LO3.a","LO4.a"), mean,na.rm = TRUE) -> pre.df #average each learning objective (LO) column, excluding missing values
+  pre.df$time <- "pre" 
+  names(pre.df) <- c("session","LO1","LO2","LO3","LO4","time")
+raw.df %>%
+  group_by(Theme) %>%
+  summarise_at(vars("LO1.b","LO2.b","LO3.b","LO4.b"), mean) -> post.df
+  post.df$time <- "post"
+  names(post.df) <- c("session","LO1","LO2","LO3","LO4","time")
+prepost2.df <- rbind(pre.df,post.df)
+
+prepost2.df%>%
+  group_by(session)
+prepost2.df$preMean <- rowMeans(prepost2.df[prepost2.df$time == "pre", 2:5])
+prepost2.df$postMean <- rowMeans(prepost2.df[prepost2.df$time == "post", 2:5])
+
+ksa01.df <- raw.df[raw.df$Theme %like% "1",c(21,22:25)] 
+summarise(raw.df, my_mean = mean(LO1.a))
+
+prepost.df[["time", "average"]].groupby("time").mean()
+
+############
+# Dumbbell #
+############
+
+#install.packages("ggplot2")
+#install.packages("ggalt")
+library(ggplot2)
+library(ggalt)
+gold <- "#d8b365"
+teal <- "#5ab4ab"
+
+dumbbell.df %>%                 
+  mutate(difference = (post-pre),                            #generates a difference score
+         position = post - (0.5 * difference)) %>%           #half-way between pre and post, from the post dot
+  
+  ggplot() + 
+  aes(x = pre,
+      xend = post,
+#      y = session) + #default: sorted by session name
+      y = reorder(session, difference), group = session) +          #sorted by greatest pre score; could replace with difference
+  geom_dumbbell(
+    size_x = 5, colour_x = gold,                             #orange pre dot
+    size_xend = 5, colour_xend = teal,                       #green post dot
+    size = 1,                                                  #black line
+    dot_guide = TRUE,
+    dot_guide_size = 0.15,
+    dot_guide_colour = "grey60") +
+  scale_x_continuous(breaks = seq (1,4,1),limits = c(1,5)) + #show x axis from 1 to 5 in intervals of 1, even if no data
+   geom_text(
+            aes(x=pre, y=session, label = "Before"),
+            color = gold, size=2, vjust=-1.5, fontface="bold",family="Lato")+
+   geom_text(
+            aes(x=post, y=session, label = "After"),
+            color = teal, size=2, vjust=-1.5, fontface="bold",family="Lato")+
+   geom_text(aes(x=pre,y=session,label = round(pre, digits = 1)), color = "white", size = 2) +             #insert pre-score in dot, rounding to 1 decimal place
+   geom_text(aes(x=post,y=session,label = round(post, digits = 1)), color = "white", size = 2) +           #insert post-score in dot, rounding to 1 decimal place
+   geom_text(aes(x=position,y=session,label = round(difference, digits = 1)), nudge_y = 0.25, size = 1.5)+ #insert difference over line
+  labs(title = "Knowledge Ratings Before & After Each Breakout Session", y = NULL) +
+  theme(panel.border = element_blank(),                                   #no gap
+        panel.background = element_rect(fill = 'transparent',color = NA), #transparent bkgd
+        panel.grid.minor = element_blank(), 
+        panel.grid.major.y = element_blank(),
+        panel.grid.major.x = element_line(), 
+        axis.ticks = element_blank())                                     #no ticks
+
+ggsave("EA3 - Knowledge.png", height = 4, width = 7)
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
