@@ -8,4 +8,4 @@ to store the survey tool, dataset, R code, graphs, and final slide deck interpre
 + datasets (with numerical values) from Qualtrics (.csv)
 
 # Outputs:
-+ dumbbell graphs to visualize relative change in LOs
++ dumbbell graph to visualize relative change in LOs
